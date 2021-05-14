@@ -19,7 +19,7 @@ class CardsRepositoryImpl(private val MtgService: MtgService) : CardsRepository 
     }
 
     companion object {
-        private const val NETWORK_PAGE_SIZE = 20
+        private const val NETWORK_PAGE_SIZE = 8
 
         // For Singleton instantiation
         @Volatile

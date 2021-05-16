@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 class CardsUseCases(private val repository: CardsRepository) {
 
-    fun searchCards(query: String): Flow<PagingData<MagicCard>> {
+    fun searchCards(query: String?): Flow<PagingData<MagicCard>> {
         return repository.fetchCards(query)
     }
 

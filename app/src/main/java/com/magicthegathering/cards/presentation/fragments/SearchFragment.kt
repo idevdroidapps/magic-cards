@@ -10,7 +10,7 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
@@ -20,7 +20,6 @@ import com.magicthegathering.cards.databinding.FragmentSearchBinding
 import com.magicthegathering.cards.domain.entities.MagicCard
 import com.magicthegathering.cards.presentation.adapters.CardLoadStateAdapter
 import com.magicthegathering.cards.presentation.adapters.CardsListAdapter
-import com.magicthegathering.cards.presentation.dependency_injection.DependencyInjection
 import com.magicthegathering.cards.presentation.utils.onClickKeyboardDoneButton
 import com.magicthegathering.cards.presentation.viewmodels.CardsViewModel
 import kotlinx.coroutines.Job
@@ -29,8 +28,9 @@ import kotlinx.coroutines.launch
 
 class SearchFragment : Fragment() {
 
-    private lateinit var _cardsViewModel: CardsViewModel
+    private val _cardsViewModel: CardsViewModel by activityViewModels()
     private lateinit var _cardListAdapter: CardsListAdapter
+    private lateinit var _binding: FragmentSearchBinding
 
     private var _searchJob: Job? = null
 
@@ -40,14 +40,44 @@ class SearchFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
 
-        activity?.let {
-            _cardsViewModel =
-                ViewModelProvider(it, DependencyInjection.provideCardsViewModelFactory()).get(
-                    CardsViewModel::class.java
-                )
-        }
+        _binding =
+            DataBindingUtil.inflate(inflater, R.layout.fragment_search, container, false)
+        initAdapter()
+        initEditText()
 
-        val binding: FragmentSearchBinding = DataBindingUtil.inflate(inflater, R.layout.fragment_search, container, false)
+        _cardsViewModel.currentQuery.observe(viewLifecycleOwner, { query ->
+            startSearch(query)
+        })
+
+        return _binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        activity?.let {
+            val sharedPref = it.getPreferences(Context.MODE_PRIVATE)
+            val query = sharedPref.getString(LAST_SEARCH_QUERY, null)
+            _binding.editTextSearch.setText(query)
+            _cardsViewModel.setCurrentQuery(query)
+        }
+    }
+
+    override fun onDestroyView() {
+        activity?.let {
+            val sharedPref = it.getPreferences(Context.MODE_PRIVATE)
+            with(sharedPref.edit()) {
+                putString(LAST_SEARCH_QUERY, _cardsViewModel.currentQuery.value?.trim().toString())
+                commit()
+            }
+        }
+        super.onDestroyView()
+    }
+
+    /**
+     * Initializes the RecyclerView Adapter and LoadStateListener
+     *
+     */
+    private fun initAdapter() {
 
         val clickListener: (MagicCard) -> Unit = {
             _cardsViewModel.setCurrentCard(it)
@@ -55,37 +85,23 @@ class SearchFragment : Fragment() {
                 SearchFragmentDirections.actionSearchFragmentToDetailsFragment()
             )
         }
-        initAdapter(binding, clickListener)
-        initEditText(binding)
-
-        _cardsViewModel.currentQuery.observe(viewLifecycleOwner, { query ->
-            startSearch(query)
-        })
-
-        return binding.root
-    }
-
-    /**
-     * Initializes the RecyclerView Adapter and LoadStateListener
-     *
-     * @param   binding The [FragmentSearchBinding] received
-     */
-    private fun initAdapter(binding: FragmentSearchBinding, clickListener: (MagicCard) -> Unit) {
-        val decoration = DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
-        binding.recyclerViewSearchResults.addItemDecoration(decoration)
-
         _cardListAdapter = CardsListAdapter(clickListener)
-        binding.recyclerViewSearchResults.adapter = _cardListAdapter.withLoadStateHeaderAndFooter(
+
+        val decoration = DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
+        _binding.recyclerViewSearchResults.addItemDecoration(decoration)
+        _binding.recyclerViewSearchResults.adapter = _cardListAdapter.withLoadStateHeaderAndFooter(
             header = CardLoadStateAdapter { _cardListAdapter.retry() },
             footer = CardLoadStateAdapter { _cardListAdapter.retry() }
         )
+
         _cardListAdapter.addLoadStateListener { loadState ->
             // Only show the list if refresh succeeds.
-            binding.recyclerViewSearchResults.isVisible = loadState.source.refresh is LoadState.NotLoading
+            _binding.recyclerViewSearchResults.isVisible =
+                loadState.source.refresh is LoadState.NotLoading
             // Show loading spinner during initial load or refresh.
-            binding.progressBar.isVisible = loadState.source.refresh is LoadState.Loading
+            _binding.progressBar.isVisible = loadState.source.refresh is LoadState.Loading
             // Show the retry state if initial load or refresh fails.
-            binding.retryButton.isVisible = loadState.source.refresh is LoadState.Error
+            _binding.retryButton.isVisible = loadState.source.refresh is LoadState.Error
 
             val errorState = loadState.source.append as? LoadState.Error
                 ?: loadState.source.prepend as? LoadState.Error
@@ -101,24 +117,17 @@ class SearchFragment : Fragment() {
         }
     }
 
-    private fun initEditText(binding: FragmentSearchBinding) {
-        val editText = binding.editTextSearch
+    private fun initEditText() {
+        val editText = _binding.editTextSearch
         editText.onClickKeyboardDoneButton {
-            setCurrentQuery(binding)
+            setCurrentQuery()
         }
-//        editText.setOnFocusChangeListener { _, hasFocus ->
-//            if (hasFocus) {
-//                binding.editTextSearch.hint = ""
-//            } else {
-//                binding.editTextSearch.hint = getString(R.string.search_by_name)
-//            }
-//        }
     }
 
     /**
      * Starts a search for
      */
-    private fun startSearch(query: String) {
+    private fun startSearch(query: String?) {
         _searchJob?.cancel()
         _searchJob = lifecycleScope.launch {
             _cardsViewModel.searchCards(query).collectLatest {
@@ -130,16 +139,19 @@ class SearchFragment : Fragment() {
     /**
      * Provides the current query to [CardsViewModel]
      *
-     * @param   binding     The [FragmentSearchBinding] received
      */
-    private fun setCurrentQuery(binding: FragmentSearchBinding) {
-        binding.editTextSearch.clearFocus()
+    private fun setCurrentQuery() {
+        _binding.editTextSearch.clearFocus()
 
         val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(binding.root.windowToken, 0)
+        imm.hideSoftInputFromWindow(_binding.root.windowToken, 0)
 
-        val query = binding.editTextSearch.text.toString()
+        val query = _binding.editTextSearch.text.toString()
         _cardsViewModel.setCurrentQuery(query)
+    }
+
+    companion object {
+        private const val LAST_SEARCH_QUERY: String = "last_search_query"
     }
 
 }

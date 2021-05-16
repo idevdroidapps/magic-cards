@@ -15,13 +15,14 @@ class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
     private var mCurrentSearchResult: Flow<PagingData<MagicCard>>? = null
     private var mPreviousQuery: String? = null
 
-    val currentQuery: LiveData<String> get() = mCurrentQuery
-    private var mCurrentQuery = MutableLiveData<String>()
+    val currentQuery: LiveData<String?> get() = mCurrentQuery
+    private var mCurrentQuery = MutableLiveData<String?>()
 
     val currentCard: LiveData<MagicCard> get() = mCurrentCard
     private var mCurrentCard = MutableLiveData<MagicCard>()
 
-    fun searchCards(query: String): Flow<PagingData<MagicCard>> {
+
+    fun searchCards(query: String?): Flow<PagingData<MagicCard>> {
         val lastResult = mCurrentSearchResult
         if (query == mPreviousQuery && lastResult != null) {
             return lastResult
@@ -48,7 +49,7 @@ class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
      *
      * @param   queryString  The query term to search, as a [String]
      */
-    fun setCurrentQuery(queryString: String) {
-        mCurrentQuery.value = queryString
+    fun setCurrentQuery(queryString: String?) {
+        mCurrentQuery.postValue(queryString)
     }
 }

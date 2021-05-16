@@ -12,16 +12,18 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
 
         <ImageView
             android:id="@+id/imageView"
-            android:layout_width="124dp"
-            android:layout_height="124dp"
-            app:listItemImage="@{card.imageUrl}"
+            android:layout_width="192dp"
+            android:layout_height="192dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            app:listItemImage="@{card.imageUrl}"
             tools:ignore="ContentDescription"
             tools:srcCompat="@tools:sample/avatars" />
 

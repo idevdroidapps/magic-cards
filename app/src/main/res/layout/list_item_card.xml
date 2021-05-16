@@ -20,12 +20,12 @@
             android:id="@+id/imageView"
             android:layout_width="192dp"
             android:layout_height="192dp"
+            android:src="@drawable/cardback"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:listItemImage="@{card.imageUrl}"
-            tools:ignore="ContentDescription"
-            tools:srcCompat="@tools:sample/avatars" />
+            tools:ignore="ContentDescription" />
 
         <TextView
             android:id="@+id/textView"

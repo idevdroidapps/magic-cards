@@ -27,7 +27,7 @@ class CardsRepositoryImpl(
 
     companion object {
         const val DEFAULT_PAGE_INDEX = 0
-        const val NETWORK_PAGE_SIZE = 9
+        const val NETWORK_PAGE_SIZE = 8
 
         // For Singleton instantiation
         @Volatile

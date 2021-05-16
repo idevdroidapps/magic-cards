@@ -21,17 +21,16 @@ class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
     val currentCard: LiveData<MagicCard> get() = mCurrentCard
     private var mCurrentCard = MutableLiveData<MagicCard>()
 
+    val startClearCacheWorker: LiveData<Boolean> get() = mStartClearCacheWorker
+    private var mStartClearCacheWorker = MutableLiveData<Boolean>()
 
     fun searchCards(query: String?): Flow<PagingData<MagicCard>> {
-        val lastResult = mCurrentSearchResult
-        if (query == mPreviousQuery && lastResult != null) {
-            return lastResult
-        }
         val newResult: Flow<PagingData<MagicCard>> =
             cardsUseCases.searchCards(query)
                 .cachedIn(viewModelScope)
         mPreviousQuery = query
         mCurrentSearchResult = newResult
+        mStartClearCacheWorker.postValue(true)
         return newResult
     }
 
@@ -50,6 +49,13 @@ class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
      * @param   queryString  The query term to search, as a [String]
      */
     fun setCurrentQuery(queryString: String?) {
-        mCurrentQuery.postValue(queryString)
+        mCurrentQuery.value = queryString
+    }
+
+    /**
+     * Sets the LiveData value for starting ClearCacheWorker
+     */
+    fun setClearCacheWorker(start: Boolean) {
+        mStartClearCacheWorker.value = start
     }
 }

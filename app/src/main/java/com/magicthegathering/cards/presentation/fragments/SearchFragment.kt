@@ -15,7 +15,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.magicthegathering.cards.R
+import com.magicthegathering.cards.data.db.ClearCacheWorker
 import com.magicthegathering.cards.databinding.FragmentSearchBinding
 import com.magicthegathering.cards.domain.entities.MagicCard
 import com.magicthegathering.cards.presentation.adapters.CardLoadStateAdapter
@@ -25,6 +28,7 @@ import com.magicthegathering.cards.presentation.viewmodels.CardsViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class SearchFragment : Fragment() {
 
@@ -45,8 +49,25 @@ class SearchFragment : Fragment() {
         initAdapter()
         initEditText()
 
+        _binding.retryButton.setOnClickListener {
+            val query = _binding.editTextSearch.text?.trim().toString()
+            startSearch(query)
+        }
+
         _cardsViewModel.currentQuery.observe(viewLifecycleOwner, { query ->
             startSearch(query)
+        })
+
+        _cardsViewModel.startClearCacheWorker.observe(viewLifecycleOwner, { start ->
+            if (start) {
+                _cardsViewModel.setClearCacheWorker(false)
+                activity?.let {
+                    val oneTimeWorkRequest = OneTimeWorkRequestBuilder<ClearCacheWorker>()
+                        .setInitialDelay(24, TimeUnit.HOURS)
+                        .build()
+                    WorkManager.getInstance(it.applicationContext).enqueue(oneTimeWorkRequest)
+                }
+            }
         })
 
         return _binding.root
@@ -62,7 +83,8 @@ class SearchFragment : Fragment() {
         }
     }
 
-    override fun onDestroyView() {
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
         activity?.let {
             val sharedPref = it.getPreferences(Context.MODE_PRIVATE)
             with(sharedPref.edit()) {
@@ -70,7 +92,6 @@ class SearchFragment : Fragment() {
                 commit()
             }
         }
-        super.onDestroyView()
     }
 
     /**

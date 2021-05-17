@@ -21,7 +21,7 @@ class CardRemoteMediator(
 ) : RemoteMediator<Int, MagicCard>() {
 
     override suspend fun initialize(): InitializeAction {
-        return InitializeAction.SKIP_INITIAL_REFRESH
+        return InitializeAction.LAUNCH_INITIAL_REFRESH
     }
 
     override suspend fun load(

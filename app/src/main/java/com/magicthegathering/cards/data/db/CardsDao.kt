@@ -11,7 +11,6 @@ interface CardsDao {
     suspend fun insertCard(card: MagicCard): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    @JvmSuppressWildcards
     suspend fun insertCards(cards: List<MagicCard>)
 
     @Update

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">cards</string>
+    <string name="app_name">Tap Me</string>
     <string name="search_by_name">Search By Name</string>
     <string name="retry">Retry</string>
 </resources>

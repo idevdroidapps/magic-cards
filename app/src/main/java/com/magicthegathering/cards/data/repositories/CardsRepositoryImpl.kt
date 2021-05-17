@@ -20,14 +20,13 @@ class CardsRepositoryImpl(
     override fun fetchCards(query: String?): Flow<PagingData<MagicCard>> {
         return Pager(
             config = PagingConfig(pageSize = NETWORK_PAGE_SIZE, enablePlaceholders = false),
-            pagingSourceFactory = { CardsPagingSource(mtgService, query) },
             remoteMediator = CardRemoteMediator(query, mtgService, cardsDatabase)
-        ).flow
+        ){CardsPagingSource(mtgService, query)}.flow
     }
 
     companion object {
         const val DEFAULT_PAGE_INDEX = 0
-        const val NETWORK_PAGE_SIZE = 8
+        const val NETWORK_PAGE_SIZE = 20
 
         // For Singleton instantiation
         @Volatile

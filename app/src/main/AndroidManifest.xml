@@ -12,7 +12,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Cards"
         android:usesCleartextTraffic="true">
-        <activity android:name="com.magicthegathering.cards.presentation.activities.MainActivity">
+        <activity android:name="com.magicthegathering.cards.presentation.activities.MainActivity"
+            android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

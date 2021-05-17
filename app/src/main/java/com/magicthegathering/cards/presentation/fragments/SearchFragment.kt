@@ -62,7 +62,9 @@ class SearchFragment : Fragment() {
             val sharedPref = it.getPreferences(Context.MODE_PRIVATE)
             val query = sharedPref.getString(LAST_SEARCH_QUERY, null)
             query?.let { queryString ->
-                _binding.editTextSearch.setText(queryString)
+                if (queryString.isNotBlank() && queryString != "null") {
+                    _binding.editTextSearch.setText(queryString)
+                }
             }
         }
     }
@@ -81,11 +83,25 @@ class SearchFragment : Fragment() {
     private fun closeKeyboard() {
         _binding.editTextSearch.clearFocus()
         activity?.let { fragAct ->
-            fragAct.getSystemService(Context.INPUT_METHOD_SERVICE)?.let{ sysService ->
+            fragAct.getSystemService(Context.INPUT_METHOD_SERVICE)?.let { sysService ->
                 val imm: InputMethodManager? = sysService as InputMethodManager?
                 imm?.hideSoftInputFromWindow(_binding.root.windowToken, 0)
             }
         }
+    }
+
+    private fun initEditText() {
+        val editText = _binding.editTextSearch
+        editText.onClickKeyboardDoneButton {
+            editText.text = editText.text
+        }
+        editText.textChanges().debounce(1000L).onEach { chars ->
+            if ((editText.hasFocus() && chars.toString().isNotBlank())
+                || (!editText.hasFocus() && _cardListAdapter.itemCount == 0 && !editText.text.isNullOrBlank()) ) {
+                closeKeyboard()
+                _cardsViewModel.setCurrentQuery(chars.toString())
+            }
+        }.launchIn(CoroutineScope(Dispatchers.Main + Job()))
     }
 
     /**
@@ -123,19 +139,6 @@ class SearchFragment : Fragment() {
                 ).show()
             }
         }
-    }
-
-    private fun initEditText() {
-        val editText = _binding.editTextSearch
-        editText.onClickKeyboardDoneButton {
-            closeKeyboard()
-        }
-        editText.textChanges().debounce(1000L).onEach { chars ->
-            if(editText.hasFocus()){
-                closeKeyboard()
-                _cardsViewModel.setCurrentQuery(chars.toString())
-            }
-        }.launchIn(CoroutineScope(Dispatchers.Main + Job()))
     }
 
     private fun initRecyclerView() {

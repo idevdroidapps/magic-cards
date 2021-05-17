@@ -8,10 +8,14 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/textInputLayout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_margin="16dp"
+            app:boxStrokeColor="@color/highlight"
+            app:boxStrokeWidth="2dp"
+            app:boxStrokeWidthFocused="1dp"
+            app:hintTextColor="@color/highlight"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
@@ -19,7 +23,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_search"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
+                android:layout_height="wrap_content"
                 android:hint="@string/search_by_name"
                 android:imeOptions="actionSearch"
                 android:importantForAutofill="no"

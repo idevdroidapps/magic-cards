@@ -47,16 +47,12 @@ class SearchFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-
         _binding =
             DataBindingUtil.inflate(inflater, R.layout.fragment_search, container, false)
 
         initListAdapter()
-
         initViews()
-
         subscribeUi()
-
         return _binding.root
     }
 
@@ -135,8 +131,10 @@ class SearchFragment : Fragment() {
             closeKeyboard()
         }
         editText.textChanges().debounce(1000L).onEach { chars ->
-            closeKeyboard()
-            _cardsViewModel.setCurrentQuery(chars.toString())
+            if(editText.hasFocus()){
+                closeKeyboard()
+                _cardsViewModel.setCurrentQuery(chars.toString())
+            }
         }.launchIn(CoroutineScope(Dispatchers.Main + Job()))
     }
 

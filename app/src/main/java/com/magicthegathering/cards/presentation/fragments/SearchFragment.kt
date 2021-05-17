@@ -65,8 +65,9 @@ class SearchFragment : Fragment() {
         activity?.let {
             val sharedPref = it.getPreferences(Context.MODE_PRIVATE)
             val query = sharedPref.getString(LAST_SEARCH_QUERY, null)
-            _binding.editTextSearch.setText(query)
-            _cardsViewModel.setCurrentQuery(query)
+            query?.let { queryString ->
+                _binding.editTextSearch.setText(queryString)
+            }
         }
     }
 
@@ -83,8 +84,12 @@ class SearchFragment : Fragment() {
 
     private fun closeKeyboard() {
         _binding.editTextSearch.clearFocus()
-        val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(_binding.root.windowToken, 0)
+        activity?.let { fragAct ->
+            fragAct.getSystemService(Context.INPUT_METHOD_SERVICE)?.let{ sysService ->
+                val imm: InputMethodManager? = sysService as InputMethodManager?
+                imm?.hideSoftInputFromWindow(_binding.root.windowToken, 0)
+            }
+        }
     }
 
     /**
@@ -129,9 +134,9 @@ class SearchFragment : Fragment() {
         editText.onClickKeyboardDoneButton {
             closeKeyboard()
         }
-        editText.textChanges().debounce(3000L).onEach {
+        editText.textChanges().debounce(1000L).onEach { chars ->
             closeKeyboard()
-            _cardsViewModel.setCurrentQuery(it.toString())
+            _cardsViewModel.setCurrentQuery(chars.toString())
         }.launchIn(CoroutineScope(Dispatchers.Main + Job()))
     }
 

@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.Flow
 class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
 
     private var mCurrentSearchResult: Flow<PagingData<MagicCard>>? = null
-    private var mPreviousQuery: String? = null
 
     val currentQuery: LiveData<String?> get() = mCurrentQuery
     private var mCurrentQuery = MutableLiveData<String?>()
@@ -28,7 +27,6 @@ class CardsViewModel(private val cardsUseCases: CardsUseCases) : ViewModel() {
         val newResult: Flow<PagingData<MagicCard>> =
             cardsUseCases.searchCards(query)
                 .cachedIn(viewModelScope)
-        mPreviousQuery = query
         mCurrentSearchResult = newResult
         mStartClearCacheWorker.postValue(true)
         return newResult

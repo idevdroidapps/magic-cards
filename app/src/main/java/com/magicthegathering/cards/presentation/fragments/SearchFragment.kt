@@ -24,18 +24,22 @@ import com.magicthegathering.cards.domain.entities.MagicCard
 import com.magicthegathering.cards.presentation.adapters.CardLoadStateAdapter
 import com.magicthegathering.cards.presentation.adapters.CardsListAdapter
 import com.magicthegathering.cards.presentation.utils.onClickKeyboardDoneButton
+import com.magicthegathering.cards.presentation.utils.textChanges
 import com.magicthegathering.cards.presentation.viewmodels.CardsViewModel
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import java.util.concurrent.TimeUnit
 
+@ExperimentalCoroutinesApi
+@FlowPreview
 class SearchFragment : Fragment() {
 
     private val _cardsViewModel: CardsViewModel by activityViewModels()
     private lateinit var _cardListAdapter: CardsListAdapter
     private lateinit var _binding: FragmentSearchBinding
-
     private var _searchJob: Job? = null
 
     override fun onCreateView(
@@ -46,29 +50,12 @@ class SearchFragment : Fragment() {
 
         _binding =
             DataBindingUtil.inflate(inflater, R.layout.fragment_search, container, false)
-        initAdapter()
-        initEditText()
 
-        _binding.retryButton.setOnClickListener {
-            val query = _binding.editTextSearch.text?.trim().toString()
-            startSearch(query)
-        }
+        initListAdapter()
 
-        _cardsViewModel.currentQuery.observe(viewLifecycleOwner, { query ->
-            startSearch(query)
-        })
+        initViews()
 
-        _cardsViewModel.startClearCacheWorker.observe(viewLifecycleOwner, { start ->
-            if (start) {
-                _cardsViewModel.setClearCacheWorker(false)
-                activity?.let {
-                    val oneTimeWorkRequest = OneTimeWorkRequestBuilder<ClearCacheWorker>()
-                        .setInitialDelay(24, TimeUnit.HOURS)
-                        .build()
-                    WorkManager.getInstance(it.applicationContext).enqueue(oneTimeWorkRequest)
-                }
-            }
-        })
+        subscribeUi()
 
         return _binding.root
     }
@@ -94,11 +81,17 @@ class SearchFragment : Fragment() {
         }
     }
 
+    private fun closeKeyboard() {
+        _binding.editTextSearch.clearFocus()
+        val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(_binding.root.windowToken, 0)
+    }
+
     /**
      * Initializes the RecyclerView Adapter and LoadStateListener
      *
      */
-    private fun initAdapter() {
+    private fun initListAdapter() {
 
         val clickListener: (MagicCard) -> Unit = {
             _cardsViewModel.setCurrentCard(it)
@@ -107,13 +100,6 @@ class SearchFragment : Fragment() {
             )
         }
         _cardListAdapter = CardsListAdapter(clickListener)
-
-        val decoration = DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
-        _binding.recyclerViewSearchResults.addItemDecoration(decoration)
-        _binding.recyclerViewSearchResults.adapter = _cardListAdapter.withLoadStateHeaderAndFooter(
-            header = CardLoadStateAdapter { _cardListAdapter.retry() },
-            footer = CardLoadStateAdapter { _cardListAdapter.retry() }
-        )
 
         _cardListAdapter.addLoadStateListener { loadState ->
             // Only show the list if refresh succeeds.
@@ -141,8 +127,34 @@ class SearchFragment : Fragment() {
     private fun initEditText() {
         val editText = _binding.editTextSearch
         editText.onClickKeyboardDoneButton {
-            setCurrentQuery()
+            closeKeyboard()
         }
+        editText.textChanges().debounce(3000L).onEach {
+            closeKeyboard()
+            _cardsViewModel.setCurrentQuery(it.toString())
+        }.launchIn(CoroutineScope(Dispatchers.Main + Job()))
+    }
+
+    private fun initRecyclerView() {
+        val decoration = DividerItemDecoration(context, DividerItemDecoration.VERTICAL)
+        _binding.recyclerViewSearchResults.addItemDecoration(decoration)
+        _binding.recyclerViewSearchResults.adapter = _cardListAdapter.withLoadStateHeaderAndFooter(
+            header = CardLoadStateAdapter { _cardListAdapter.retry() },
+            footer = CardLoadStateAdapter { _cardListAdapter.retry() }
+        )
+    }
+
+    private fun initRetryButton() {
+        _binding.retryButton.setOnClickListener {
+            val query = _binding.editTextSearch.text?.trim().toString()
+            startSearch(query)
+        }
+    }
+
+    private fun initViews() {
+        initRecyclerView()
+        initEditText()
+        initRetryButton()
     }
 
     /**
@@ -157,18 +169,22 @@ class SearchFragment : Fragment() {
         }
     }
 
-    /**
-     * Provides the current query to [CardsViewModel]
-     *
-     */
-    private fun setCurrentQuery() {
-        _binding.editTextSearch.clearFocus()
+    private fun subscribeUi() {
+        _cardsViewModel.currentQuery.observe(viewLifecycleOwner, { query ->
+            startSearch(query)
+        })
 
-        val imm = activity?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(_binding.root.windowToken, 0)
-
-        val query = _binding.editTextSearch.text.toString()
-        _cardsViewModel.setCurrentQuery(query)
+        _cardsViewModel.startClearCacheWorker.observe(viewLifecycleOwner, { start ->
+            if (start) {
+                _cardsViewModel.setClearCacheWorker(false)
+                activity?.let {
+                    val oneTimeWorkRequest = OneTimeWorkRequestBuilder<ClearCacheWorker>()
+                        .setInitialDelay(24, TimeUnit.HOURS)
+                        .build()
+                    WorkManager.getInstance(it.applicationContext).enqueue(oneTimeWorkRequest)
+                }
+            }
+        })
     }
 
     companion object {

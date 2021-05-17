@@ -68,6 +68,7 @@ dependencies {
     implementation "androidx.paging:paging-runtime-ktx:$paging_version"
     // Room
     implementation "androidx.room:room-runtime:$room_version"
+    androidTestImplementation 'androidx.test:rules:1.4.0-alpha06'
     // To use Kotlin annotation processing tool (kapt)
     kapt "androidx.room:room-compiler:$room_version"
     // optional - Kotlin Extensions and Coroutines support for Room
